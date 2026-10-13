@@ -1,0 +1,146 @@
+# selects the modular build path in main.py
+framework:
+  type: modular
+
+# project root; audio is read from <base_path>/Data (set via --base_path)
+base_path: !PLACEHOLDER
+# RNG seed; override with --seed for multi-seed runs (main.py seeds RNGs)
+seed: 1234
+# front-end encoder, loaded from HuggingFace Transformers by model ID
+# (--encoder_name openai/whisper-large-v2 for Whisper)
+encoder_name: facebook/wav2vec2-xls-r-300m
+# no LLM backbone — this is the encoder + FC recipe
+llm_name: none
+# verbalizer word for the real class
+word_for_real: real
+# verbalizer word for the fake class
+word_for_fake: fake
+# name for this run, added to the end of the output folder name (e.g. xlsr_fc)
+run_name: ""
+# experiment folder name (built from the fields above)
+exp_name: !ref encoder_fc_cls_<word_for_real>_<word_for_fake>_<run_name>
+# root directory holding the audio files
+data_folder: !ref <base_path>/Data
+# directory holding train/valid/test protocol CSVs
+protocol_folder: ./protocols
+
+# training / validation / test data source
+dataset:
+  # protocols are CSV files
+  format: csv
+  # base directory prepended to each clip path
+  data_root: !ref <data_folder>
+  # training-set protocol
+  train_path: !ref <protocol_folder>/train.csv
+  # validation-set protocol
+  valid_path: !ref <protocol_folder>/valid.csv
+  # test-set protocol
+  test_path: !ref <protocol_folder>/test.csv
+  # CSV column holding the clip ID
+  id_key: ID
+  # CSV column holding the audio file path
+  audio_path_key: Path
+  # CSV column holding the real/fake label
+  label_key: Label
+  # task tag passed through the pipeline
+  task_name: deepfake_detection
+  # optional openSMILE feature column (unused here)
+  opensmile_key: ~
+  audio:
+    # feed the raw waveform to the encoder
+    load_mode: waveform
+    # target sample rate (Hz); inputs are resampled to this
+    sample_rate: 16000
+
+# text prompt (empty for the encoder + FC recipe — no LLM)
+prompt:
+  name: deepfake_single_word
+  style: plain
+  system_message: ""
+  template_body: ""
+  template_suffix: ""
+
+# how predicted text is mapped back to a class label
+target_formatter:
+  # match a single real/fake word
+  type: single_word
+  # lowercase before matching
+  lowercase: true
+  # only inspect the first word of the output
+  first_word_only: true
+
+# class definitions and their verbalizer words
+labels:
+  real:
+    # class index
+    id: 0
+    verbalizers:
+      - !ref <word_for_real>
+  fake:
+    # class index
+    id: 1
+    verbalizers:
+      - !ref <word_for_fake>
+
+# front-end encoder settings
+audio_encoder:
+  # HF transformers audio encoder wrapper
+  type: transformers_audio_encoder
+  # encoder weights to load
+  model_name: !ref <encoder_name>
+  # matching feature processor
+  processor_name: !ref <encoder_name>
+  # fine-tune the encoder end-to-end (not frozen)
+  freeze: false
+
+# audio→LLM projector (none for the encoder + FC recipe)
+projector:
+  type: none
+
+# top-level model assembly
+model:
+  # routes to the encoder + mean-pool + linear-head builder
+  family: encoder_fc
+  # no LLM model name for this recipe
+  model_name: none
+  # allow custom HF model code
+  trust_remote_code: true
+
+# classifier head
+head:
+  # binary CLS head over the pooled embedding
+  type: classification
+  # number of output classes
+  num_classes: 2
+  # dropout before the linear layer
+  dropout: 0.1
+
+# optimisation schedule
+training:
+  # training mini-batch size
+  batch_size: 8
+  # validation mini-batch size
+  valid_batch_size: 8
+  # DataLoader worker processes
+  num_workers: 8
+  # max epochs over the training set
+  number_of_epochs: 5
+  # peak learning rate
+  learning_rate: 4e-5
+  # AdamW weight decay
+  weight_decay: 0.01
+  # run validation every N optimiser steps
+  valid_step: 200
+  # log training metrics every N steps
+  log_interval: 10
+  # linear LR warm-up steps
+  warmup_steps: 200
+  # hard cap on optimiser steps
+  optimizer_step_limit: 30000
+  # class-balanced sampling during training
+  balanced_sampling: true
+
+# post-training evaluation
+evaluation:
+  # score the test set once training finishes
+  run_test_after_training: true

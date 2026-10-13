@@ -1,0 +1,176 @@
+# selects the modular build path in main.py
+framework:
+  type: modular
+
+# project root; audio is read from <base_path>/Data (set via --base_path)
+base_path: !PLACEHOLDER
+# RNG seed; override with --seed for multi-seed runs (main.py seeds RNGs)
+seed: 1234
+# no standalone encoder — Qwen2-Audio carries its own audio front-end
+encoder_name: none
+# ALLM backbone, loaded from HuggingFace Transformers by model ID
+llm_name: Qwen/Qwen2-Audio-7B-Instruct
+# verbalizer word for the real class
+word_for_real: real
+# verbalizer word for the fake class
+word_for_fake: fake
+# generative = read real/fake token from the LM head; classification = CLS head
+head_type: generative
+# name for this run, added to the end of the output folder name (e.g. qwen_gen)
+run_name: ""
+# experiment folder name (built from the fields above)
+exp_name: !ref mllm_<head_type>_<word_for_real>_<word_for_fake>_<run_name>
+# root directory holding the audio files
+data_folder: !ref <base_path>/Data
+# directory holding train/valid/test protocol CSVs
+protocol_folder: ./protocols
+
+# training / validation / test data source
+dataset:
+  # protocols are CSV files
+  format: csv
+  # base directory prepended to each clip path
+  data_root: !ref <data_folder>
+  # training-set protocol
+  train_path: !ref <protocol_folder>/train.csv
+  # validation-set protocol
+  valid_path: !ref <protocol_folder>/valid.csv
+  # test-set protocol
+  test_path: !ref <protocol_folder>/test.csv
+  # CSV column holding the clip ID
+  id_key: ID
+  # CSV column holding the audio file path
+  audio_path_key: Path
+  # CSV column holding the real/fake label
+  label_key: Label
+  # task tag passed through the pipeline
+  task_name: deepfake_detection
+  # set to opensmile_text to inject acoustic features into the prompt
+  opensmile_key: ~
+  audio:
+    # feed the raw waveform to the processor
+    load_mode: waveform
+    # target sample rate (Hz); inputs are resampled to this
+    sample_rate: 16000
+
+# task prompt shown to the ALLM (system_message + body + suffix)
+prompt:
+  # prompt template name
+  name: deepfake_single_word
+  # chat-style formatting (system/user/assistant turns)
+  style: chat
+  # system role message
+  system_message: "You are a speech forensics expert. You understand prosody, phonetics, voice quality, and speaker naturalness."
+  # user instruction preceding the classification ask
+  template_body: |
+    Listen carefully to this recording. Consider whether the voice sounds
+    natural, whether prosody matches the spoken content, and whether the
+    speaker sounds consistent.
+  # final classification instruction
+  template_suffix: !ref |
+    Classify as either <word_for_real> or <word_for_fake>.
+
+# how predicted text is mapped back to a class label
+target_formatter:
+  # match a single real/fake word
+  type: single_word
+  # lowercase before matching
+  lowercase: true
+  # only inspect the first word of the output
+  first_word_only: true
+
+# class definitions and their verbalizer words
+labels:
+  real:
+    # class index
+    id: 0
+    verbalizers:
+      - !ref <word_for_real>
+  fake:
+    # class index
+    id: 1
+    verbalizers:
+      - !ref <word_for_fake>
+
+# standalone audio encoder (none — handled by the ALLM)
+audio_encoder:
+  type: none
+
+# audio→LLM projector (none — handled by the ALLM)
+projector:
+  type: none
+
+# top-level model assembly
+model:
+  # routes to the ALLM builder
+  family: auto_audio_causal_lm
+  # LLM weights to load
+  model_name: !ref <llm_name>
+  # matching audio/text processor
+  processor_name: !ref <llm_name>
+  # matching tokenizer
+  tokenizer_name: !ref <llm_name>
+  # max prompt length in tokens
+  max_length: 512
+  # allow custom HF model code
+  trust_remote_code: true
+  # shard the 7B model across available GPUs
+  device_map: auto
+  # LoRA adapter config
+  lora:
+    # turn LoRA on
+    enabled: true
+    # LoRA rank
+    r: 16
+    # LoRA scaling factor
+    lora_alpha: 32
+    # attention projections adapted by LoRA
+    target_modules: [q_proj, v_proj]
+
+# decision head
+head:
+  # follows head_type (classification | generative)
+  type: !ref <head_type>
+  # number of output classes (used when head_type=classification)
+  num_classes: 2
+  # dropout before the linear layer (used when head_type=classification)
+  dropout: 0.1
+
+# generative-head decoding (used when head_type=generative)
+generation:
+  # read class logits directly instead of decoding text
+  generate_text: false
+  # tokens to generate when generate_text is true
+  max_new_tokens: 4
+  # greedy decoding
+  do_sample: false
+
+# optimisation schedule
+training:
+  # training mini-batch size
+  batch_size: 4
+  # validation mini-batch size
+  valid_batch_size: 4
+  # DataLoader worker processes
+  num_workers: 8
+  # max epochs over the training set
+  number_of_epochs: 5
+  # peak learning rate
+  learning_rate: 4e-5
+  # AdamW weight decay
+  weight_decay: 0.01
+  # run validation every N optimiser steps
+  valid_step: 1000
+  # log training metrics every N steps
+  log_interval: 10
+  # linear LR warm-up steps
+  warmup_steps: 500
+  # hard cap on optimiser steps
+  optimizer_step_limit: 200000
+  # class-balanced sampling during training
+  balanced_sampling: true
+
+# post-training evaluation
+evaluation:
+  # score the test set once training finishes
+  run_test_after_training: true

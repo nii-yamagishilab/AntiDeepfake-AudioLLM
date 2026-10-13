@@ -1,0 +1,29 @@
+# Core deep learning
+torch
+torchaudio
+
+# Speech / training framework
+speechbrain
+hyperpyyaml
+tensorboard
+
+# Hugging Face ecosystem (encoders, Qwen2-Audio, LoRA)
+transformers
+accelerate
+peft
+huggingface-hub
+
+# Audio / signal processing
+soundfile
+scipy            # Butterworth band-stop (sub-band probing)
+
+# Scientific computing
+numpy
+pandas
+scikit-learn     # EER / ROC
+tqdm
+
+# Tested with (single NVIDIA H100, CUDA 11.8):
+#   torch==2.6.0  torchaudio==2.6.0  transformers==5.5.4  speechbrain==1.1.0
+#   hyperpyyaml==1.2.3  peft==0.19.0  accelerate==1.13.0  scipy==1.17.1
+#   scikit-learn==1.8.0  pandas==3.0.3  numpy==2.4.4  soundfile==0.13.1
