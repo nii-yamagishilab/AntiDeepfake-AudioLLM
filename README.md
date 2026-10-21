@@ -3,8 +3,7 @@
 <!-- markdownlint-disable no-duplicate-header -->
 
 <div align="center">
-  <h1>What Do Deepfake Audio Detectors Hear?</h1>
-  <p><strong>From Self-Supervised Models to Audio LLMs</strong></p>
+  <h1>What Do Deepfake Audio Detectors Hear? From Self-Supervised Models to Audio LLMs</p>
 </div>
 
 <div align="center" style="line-height: 1;">
@@ -12,7 +11,11 @@
     src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Checkpoints-ffc107?color=ffc107&logoColor=white"/></a>
   <a href="./LICENSE"><img alt="Code License"
     src="https://img.shields.io/badge/Code_License-BSD%203--Clause-f5de53?&color=f5de53"/></a>
-  <img alt="Venue" src="https://img.shields.io/badge/IEEE-SLT%202026-00629B"/>
+  <img alt="Model License"
+    src="https://img.shields.io/badge/Checkpoint_License-CC BY%20NC 4.0-f5de53?&color=f5de53"/></a>
+
+  <br>
+  <a href="https://arxiv.org/abs/2610.17617"><b>Paper Link</b></a>
 </div>
 
 ---
@@ -30,7 +33,7 @@ conda create -n YOUR_ENV_NAME python=3.10 -y
 conda activate YOUR_ENV_NAME
 conda install -c conda-forge ffmpeg -y
 pip install --upgrade pip
-pip install -r requirements.txt
+python3 -m pip install -r requiments.txt
 ```
 
 ---
