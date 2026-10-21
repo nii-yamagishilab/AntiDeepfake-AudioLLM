@@ -11,7 +11,7 @@
     src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Checkpoints-ffc107?color=ffc107&logoColor=white"/></a>
   <a href="./LICENSE"><img alt="Code License"
     src="https://img.shields.io/badge/Code_License-BSD%203--Clause-f5de53?&color=f5de53"/></a>
-  <img alt="Model License"
+  <a href="./LICENSE-CHECKPOINT"><img alt="Model License"
     src="https://img.shields.io/badge/Checkpoint_License-CC BY%20NC 4.0-f5de53?&color=f5de53"/></a>
 
   <br>
@@ -162,6 +162,7 @@ Codes are based on the implementations of
 [AntiDeepfake](https://github.com/nii-yamagishilab/AntiDeepfake/tree/main).
 
 The code in this repository is released under the BSD 3-Clause License. See [`LICENSE`](LICENSE).
+The model checkpoints are released under CC BY-NC 4.0. See [`LICENSE-CHECKPOINT`](LICENSE-CHECKPOINT).
 
 ---
 
